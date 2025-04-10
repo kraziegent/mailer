@@ -1,0 +1,9 @@
+/* @tailwind base; */
+/* @tailwind components; */
+@tailwind utilities;
+/* @tailwind variants; */
+@import "tailwindcss/preflight";
+@import '../../../../vendor/filament/filament/resources/css/base.css';
+@import '../../../../vendor/awcodes/filament-tiptap-editor/resources/css/plugin.css';
+
+@config 'tailwind.config.js';

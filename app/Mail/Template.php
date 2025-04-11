@@ -2,7 +2,6 @@
 
 namespace App\Mail;
 
-use DateTime;
 use App\Models\Recipient;
 use App\Models\MailTemplate;
 use Illuminate\Bus\Queueable;
@@ -10,13 +9,13 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 use Spatie\MailTemplates\TemplateMailable;
-use Illuminate\Queue\Middleware\ThrottlesExceptions;
 
-class Template extends TemplateMailable implements ShouldQueue, ShouldBeUnique
+class Template extends TemplateMailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -30,9 +29,6 @@ class Template extends TemplateMailable implements ShouldQueue, ShouldBeUnique
     public ?string $attribute_8 = null;
     public ?string $attribute_9 = null;
     public ?string $attribute_10 = null;
-    public ?string $mail_banner;
-    public ?string $footer;
-    public ?string $logo = "https://laravel.com/img/notification-logo.png";
 
     /**
      * Create a new message instance.
@@ -57,28 +53,16 @@ class Template extends TemplateMailable implements ShouldQueue, ShouldBeUnique
         $this->attribute_9 = $recipient->attribute_9;
         $this->attribute_10 = $recipient->attribute_10;
 
-        $this->mail_banner = url("imgs/secmailbanner.png");
-        $this->logo = url("imgs/SECLogo.png");
-        $this->footer = date('Y') .' '. config('app.name') .' '. __('All rights reserved.');
-    }
+        // Use line below to generate a base64 image string or just add a url for your logo
+        // $img = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path("imgs/SECLogo.png")));
+        $logo = file_get_contents(public_path("imgs/logo"));
 
-    /**
-     * Get the middleware the job should pass through.
-     *
-     * @return array<int, object>
-     */
-    public function middleware(): array
-    {
-        return [(new ThrottlesExceptions(2, 5))->backoff(10)];
+        $this->setAdditionalData([
+            'header' => "<img src=$logo alt='Logo' style='width: auto; height: 75px; max-height: 75px;'/>",
+            'title' => $template->subject,
+            'footer' => date('Y') .' '. config('app.name') .' '. __('All rights reserved.'),
+        ]);
     }
-
-    /**
-     * Determine the time at which the job should timeout.
-     */
-    // public function retryUntil(): DateTime
-    // {
-    //     return now()->addMinutes(70);
-    // }
 
     /**
      * Get the message headers.
@@ -86,11 +70,10 @@ class Template extends TemplateMailable implements ShouldQueue, ShouldBeUnique
     public function headers(): Headers
     {
         return new Headers(
-            messageId: $this->recipient->options['message_id'],
             text: [
                 // 'List-Unsubscribe' => route('attendees.unsubscribe', ['attendee' => $this->attendee]),
                 // 'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click',
-                'X-Mailgun-Variables' => ['message_id' => $this->recipient->options['message_id']],
+                'X-Mailgun-Variables' => json_encode(['message_id' => $this->recipient->options['message_id'] ?? null]),
             ],
         );
     }

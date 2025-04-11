@@ -10,6 +10,7 @@ class CreateMailTemplatesTable extends Migration
     {
         Schema::create('mail_templates', function (Blueprint $table) {
             $table->increments('id');
+            $table->morphs('mailer');
             $table->string('name');
             $table->string('display_name')->nullable();
             $table->string('from_address');

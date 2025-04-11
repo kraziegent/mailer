@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\MailTemplateResource\RelationManagers;
 
+use App\Filament\Imports\RecipientImporter;
+use App\Jobs\BulkMailing;
+use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Illuminate\Support\Str;
@@ -55,6 +58,7 @@ class RecipientsRelationManager extends RelationManager
             ->recordTitleAttribute('email')
             ->columns([
                 Tables\Columns\TextColumn::make('email')->searchable(),
+                Tables\Columns\TextColumn::make('delivered_at')->label('Delivered')->dateTime('Y-m-d H:i:s'),
                 Tables\Columns\TextColumn::make('attribute_1')->label('Attribute 1'),
                 Tables\Columns\TextColumn::make('attribute_2')->label('Attribute 2'),
                 Tables\Columns\TextColumn::make('attribute_3')->label('Attribute 3'),
@@ -71,14 +75,14 @@ class RecipientsRelationManager extends RelationManager
             //     ->query(fn (Builder $query) => $query->whereNotNull('registered_at')),
             // ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()
-                // ->using(function (array $data, $livewire): Model {
-                //     $service = app();
-                //     $data['event_id'] = $livewire->ownerRecord->getKey();
-
-                //     return $service->save($data);
-                // }),
-
+                Tables\Actions\Action::make('send_mail')
+                ->label('Send Mail')
+                ->requiresConfirmation()
+                ->action(fn() => BulkMailing::dispatch($this->getOwnerRecord(), Filament::auth()->user())),
+                Tables\Actions\CreateAction::make(),
+                Tables\Actions\ImportAction::make()
+                ->importer(RecipientImporter::class)
+                ->options(['mail_template_id' => $this->getOwnerRecord()->getKey()]),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
@@ -90,7 +94,7 @@ class RecipientsRelationManager extends RelationManager
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\BulkAction::make('Send Mail')
                     ->requiresConfirmation()
-                    ->icon('heroicon-m-qr-code')
+                    ->icon('heroicon-m-envelope')
                     ->action(fn (Collection $records) => $records->each(function($record) {
 
                     }))

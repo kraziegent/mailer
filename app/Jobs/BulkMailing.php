@@ -32,12 +32,14 @@ class BulkMailing implements ShouldQueue
      */
     public function handle(): void
     {
-        $minutes = 5;
+        $minutes = 0;
 
         $this->template->recipients()->chunk(25, function(Collection $recipients) use($minutes) {
             foreach($recipients as $recipient) {
                 Mail::to($recipient->email)->later(now()->addMinutes($minutes), new Template($this->template, $this->user, $recipient));
 
+                // Delay each email by 5 minutes
+                // This is a simple way to avoid hitting the email sending limit
                 $minutes = $minutes + 5;
             }
         });

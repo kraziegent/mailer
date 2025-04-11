@@ -23,7 +23,8 @@ class BulkMailing implements ShouldQueue
      */
     public function __construct(
         protected MailTemplate $template,
-        protected User $user
+        protected User $user,
+        protected ?Collection $recipients = null,
     )
     {}
 
@@ -34,7 +35,13 @@ class BulkMailing implements ShouldQueue
     {
         $minutes = 0;
 
-        $this->template->recipients()->chunk(25, function(Collection $recipients) use($minutes) {
+        $query = $this->template->recipients()->whereNull('delivered_at');
+
+        if ($this->recipients) {
+            $query = $query->whereIn('id', $this->recipients->pluck('id'));
+        }
+
+        $query->chunk(25, function(Collection $recipients) use($minutes) {
             foreach($recipients as $recipient) {
                 Mail::to($recipient->email)->later(now()->addMinutes($minutes), new Template($this->template, $this->user, $recipient));
 

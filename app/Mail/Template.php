@@ -55,7 +55,11 @@ class Template extends TemplateMailable implements ShouldQueue
 
         // Use line below to generate a base64 image string or just add a url for your logo
         // $img = 'data:image/png;base64,' . base64_encode(file_get_contents(public_path("imgs/SECLogo.png")));
-        $logo = file_get_contents(public_path("imgs/logo"));
+        $logo = file_get_contents(storage_path("app/public/logo"));
+
+        if (!$logo) {
+            $logo = "https://laravel.com/img/notification-logo.png";
+        }
 
         $this->setAdditionalData([
             'header' => "<img src=$logo alt='Logo' style='width: auto; height: 75px; max-height: 75px;'/>",
@@ -84,7 +88,7 @@ class Template extends TemplateMailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new Address($this->mailTemplate->from_address, $this->mailTemplate->from_name ?? $this->mailTemplate->name),
+            from: new Address($this->mailTemplate->from_address, $this->mailTemplate->from_name ?? $this->mailTemplate->display_name),
         );
     }
 

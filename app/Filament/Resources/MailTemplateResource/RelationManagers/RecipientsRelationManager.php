@@ -4,6 +4,7 @@ namespace App\Filament\Resources\MailTemplateResource\RelationManagers;
 
 use App\Filament\Imports\RecipientImporter;
 use App\Jobs\BulkMailing;
+use App\Mail\Template;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Mail;
 
 class RecipientsRelationManager extends RelationManager
 {
@@ -75,9 +77,10 @@ class RecipientsRelationManager extends RelationManager
             //     ->query(fn (Builder $query) => $query->whereNotNull('registered_at')),
             // ])
             ->headerActions([
-                Tables\Actions\Action::make('send_mail')
+                Tables\Actions\Action::make('send_all_mail')
                 ->label('Send Mail')
                 ->requiresConfirmation()
+                ->modalDescription('Only recipients for whom the mail hasnt been delivered will receive this email.')
                 ->action(fn() => BulkMailing::dispatch($this->getOwnerRecord(), Filament::auth()->user())),
                 Tables\Actions\CreateAction::make(),
                 Tables\Actions\ImportAction::make()
@@ -87,17 +90,23 @@ class RecipientsRelationManager extends RelationManager
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\EditAction::make(),
+                    Tables\Actions\Action::make('send_single_mail')
+                    ->label('Send Mail')
+                    ->icon('heroicon-m-envelope')
+                    ->requiresConfirmation()
+                    ->modalDescription('You are about to send an email to the recipient.')
+                    ->action(fn(Model $record) => Mail::to($record->email)->send(new Template($this->getOwnerRecord(), Filament::auth()->user(), $record)))
                 ])->tooltip('Actions')
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\BulkAction::make('Send Mail')
+                    Tables\Actions\BulkAction::make('send_bulk_mail')
+                    ->label('Send Mail')
                     ->requiresConfirmation()
+                    ->modalDescription('You are about to send an email to all selected recipient(s).')
                     ->icon('heroicon-m-envelope')
-                    ->action(fn (Collection $records) => $records->each(function($record) {
-
-                    }))
+                    ->action(fn (Collection $records) => BulkMailing::dispatch($this->getOwnerRecord(), Filament::auth()->user(), $records))
                     ->deselectRecordsAfterCompletion(),
                 ]),
             ])
